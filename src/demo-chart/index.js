@@ -3,6 +3,7 @@ import {select} from 'd3-selection';
 import {scaleOrdinal, schemeCategory10} from 'd3-scale';
 import { format } from 'd3-format';
 import React, {Component} from 'react';
+import {findDOMNode} from 'react-dom';
 // import * as util from './util';
 
 class DemoChart extends Component {
@@ -38,7 +39,6 @@ class DemoChart extends Component {
   }
 
   nodeUpdate = (node) => {
-    console.log(node);
     node.select("rect")
       .attr("x", function(d) { return d.x0; })
       .attr("y", function(d) { return d.y0; })
@@ -62,7 +62,6 @@ class DemoChart extends Component {
   }
 
   linkEnter = (link) => {
-    console.log("link enter")
     link
       .attr('d', sankeyLinkHorizontal())
       .attr('stroke-width', (d) => (Math.max(1, d.width)));
@@ -76,15 +75,13 @@ class DemoChart extends Component {
       .attr('stroke-width', (d) => (Math.max(1, d.width)));
   }
 
-  graphUpdate = (selection) => {
-    selection.selectAll('.node')
-      .call(this.nodeUpdate);
-    selection.selectAll('.link')
-      .call(this.linkUpdate);
+  linkKeyFn = (link) => {
+    console.log(`${link.source.name}->${link.target.name}`);
+    return `${link.source.name}->${link.target.name}`;
   }
 
   componentDidMount() {
-    this.svg = select("svg");
+    this.svg = select(findDOMNode(this));
     const svg = this.svg;
     
     this.link = svg.append("g")
@@ -92,9 +89,8 @@ class DemoChart extends Component {
         .attr("fill", "none")
         .attr("stroke", "#000")
         .attr("stroke-opacity", 0.2)
-      .selectAll("path");
-
-    this.link = this.link.data(this.props.links);
+      .selectAll("path")
+        .data(this.props.links, this.linkKeyFn);
     this.link.enter().append("path").call(this.linkEnter);
 
     this.node = svg.append("g")
@@ -105,26 +101,25 @@ class DemoChart extends Component {
 
     this.node = this.node.data(this.props.nodes);
     this.node.enter().append("g").call(this.nodeEnter);
+    console.log(this.node.nodes());
   }
   
-  shouldComponentUpdate(nextProps) {
-    this.link = this.link.data(nextProps.links, (node) => (node.name));
-    this.link.enter()//.append('path').call(this.linkEnter);
+  componentDidUpdate(_prevProps, _prevState) {
+    this.link = this.link.data(this.props.links, this.linkKeyFn);
+    this.link.enter().append('path').call(this.linkEnter);
     this.link.exit().remove();
     this.link.call(this.linkUpdate);
       
-    this.node = this.node.data(nextProps.nodes, (node) => (node.name));
-    this.node.enter()//.append("g").call(this.nodeEnter);
+    this.node = this.node.data(this.props.nodes, (node) => (node.name));
+    this.node.enter().append("g").call(this.nodeEnter);
     this.node.exit().remove();
     this.node.call(this.nodeUpdate);
   }
   
   render() {
     return (
-      <div>
-        <svg width={900} height={500}>
-        </svg>
-      </div>
+      <svg width={900} height={500}>
+      </svg>
     )
   }
 }
